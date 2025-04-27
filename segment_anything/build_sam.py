@@ -96,8 +96,8 @@ def _build_sam(
             iou_head_depth=3,
             iou_head_hidden_dim=256,
         ),
-        pixel_mean=[123.675, 116.28, 103.53],
-        pixel_std=[58.395, 57.12, 57.375],
+        # pixel_mean=[123.675, 116.28, 103.53],
+        # pixel_std=[58.395, 57.12, 57.375],
     )
     sam.eval()
     if checkpoint is not None:
