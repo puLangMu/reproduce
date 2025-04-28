@@ -78,10 +78,12 @@ train_loader, val_loader = loadersLitho(Benchmark, ImageSize, BatchSize, NJobs)
 
 
 
-import sys
-sys.path.append("..")
-from segment_anything import sam_model_registry, SamPredictor
-model_type = "vit_b"
-sam = sam_model_registry[model_type]
+# import sys
+# sys.path.append("..")
+# from segment_anything import sam_model_registry, SamPredictor
+# model_type = "vit_b"
+# sam = sam_model_registry[model_type]
+
+
 
 
