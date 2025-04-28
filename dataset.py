@@ -47,8 +47,8 @@ class DataLitho(torch.utils.data.Dataset):
         Source = Source[None, :, :]
         resist = resist[None, :, :]
         if self._crop: 
-            padX = self._size[0] // 8
-            padY = self._size[1] // 8
+            padX = self._size[0] // 12
+            padY = self._size[1] // 12
             startX = random.randint(0, 2*padX-1)
             startY = random.randint(0, 2*padY-1)
             mask = F.pad(mask.unsqueeze(0), (padX, padX, padY, padY))
@@ -87,7 +87,11 @@ class DataLitho(torch.utils.data.Dataset):
         if self._cache: 
             return self._imagesSource[index]
         else: 
-            return self._loadImage(self._filesSource[index])
+            # 加载 Source 图像
+            image = self._loadImage(self._filesSource[index])
+            # # 调整大小为 (256, 256)
+            # image = F.interpolate(image[None, None, :, :], (256, 256), mode="bilinear", align_corners=False)[0, 0]
+            return image
 
     def _loadResist(self, index): 
         if self._cache: 

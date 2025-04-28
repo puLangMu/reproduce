@@ -8,9 +8,14 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from typing import List, Tuple, Type
 
 from .common import LayerNorm2d
+
+
+from typing import Any, Optional, Tuple, Type, List
+import numpy as np
+
+
 
 
 class MaskDecoder(nn.Module):
@@ -19,10 +24,13 @@ class MaskDecoder(nn.Module):
         *,
         transformer_dim: int,
         transformer: nn.Module,
-        num_multimask_outputs: int = 3,
+        # num_multimask_outputs: int = 3,
         activation: Type[nn.Module] = nn.GELU,
-        iou_head_depth: int = 3,
-        iou_head_hidden_dim: int = 256,
+        # iou_head_depth: int = 3,
+        # iou_head_hidden_dim: int = 256,
+        image_embedding_size: Tuple[int, int] = (64, 64),
+        embed_dim: int = 256,
+        
     ) -> None:
         """
         Predicts masks given an image and prompt embeddings, using a
@@ -41,14 +49,17 @@ class MaskDecoder(nn.Module):
             used to predict mask quality
         """
         super().__init__()
+        self.embed_dim = embed_dim
         self.transformer_dim = transformer_dim
         self.transformer = transformer
 
-        self.num_multimask_outputs = num_multimask_outputs
+        self.pe_layer = PositionEmbeddingRandom(self.embed_dim // 2)
 
-        self.iou_token = nn.Embedding(1, transformer_dim)
-        self.num_mask_tokens = num_multimask_outputs + 1
-        self.mask_tokens = nn.Embedding(self.num_mask_tokens, transformer_dim)
+        # self.num_multimask_outputs = num_multimask_outputs
+
+        # self.iou_token = nn.Embedding(1, transformer_dim)
+        # self.num_mask_tokens = num_multimask_outputs + 1
+        # self.mask_tokens = nn.Embedding(self.num_mask_tokens, transformer_dim)
 
         self.output_upscaling = nn.Sequential(
             nn.ConvTranspose2d(transformer_dim, transformer_dim // 4, kernel_size=2, stride=2),
@@ -57,6 +68,7 @@ class MaskDecoder(nn.Module):
             nn.ConvTranspose2d(transformer_dim // 4, transformer_dim // 8, kernel_size=2, stride=2),
             activation(),
         )
+
         self.output_hypernetworks_mlps = nn.ModuleList(
             [
                 MLP(transformer_dim, transformer_dim, transformer_dim // 8, 3)
@@ -64,9 +76,11 @@ class MaskDecoder(nn.Module):
             ]
         )
 
-        self.iou_prediction_head = MLP(
-            transformer_dim, iou_head_hidden_dim, self.num_mask_tokens, iou_head_depth
-        )
+        self.image_embedding_size = image_embedding_size
+
+        # self.iou_prediction_head = MLP(
+        #     transformer_dim, iou_head_hidden_dim, self.num_mask_tokens, iou_head_depth
+        # )
 
     def forward(
         self,
@@ -93,7 +107,7 @@ class MaskDecoder(nn.Module):
         """
         masks, iou_pred = self.predict_masks(
             image_embeddings=image_embeddings,
-            image_pe=image_pe,
+            image_pe=self.get_dense_pe(),
             sparse_prompt_embeddings=sparse_prompt_embeddings,
             dense_prompt_embeddings=dense_prompt_embeddings,
         )
@@ -147,6 +161,17 @@ class MaskDecoder(nn.Module):
         iou_pred = self.iou_prediction_head(iou_token_out)
 
         return masks, iou_pred
+    
+    def get_dense_pe(self) -> torch.Tensor:
+        """
+        Returns the positional encoding used to encode point prompts,
+        applied to a dense set of points the shape of the image encoding.
+
+        Returns:
+          torch.Tensor: Positional encoding with shape
+            1x(embed_dim)x(embedding_h)x(embedding_w)
+        """
+        return self.pe_layer(self.image_embedding_size).unsqueeze(0)
 
 
 # Lightly adapted from
@@ -174,3 +199,48 @@ class MLP(nn.Module):
         if self.sigmoid_output:
             x = F.sigmoid(x)
         return x
+
+class PositionEmbeddingRandom(nn.Module):
+    """
+    Positional encoding using random spatial frequencies.
+    """
+
+    def __init__(self, num_pos_feats: int = 64, scale: Optional[float] = None) -> None:
+        super().__init__()
+        if scale is None or scale <= 0.0:
+            scale = 1.0
+        self.register_buffer(
+            "positional_encoding_gaussian_matrix",
+            scale * torch.randn((2, num_pos_feats)),
+        )
+
+    def _pe_encoding(self, coords: torch.Tensor) -> torch.Tensor:
+        """Positionally encode points that are normalized to [0,1]."""
+        # assuming coords are in [0, 1]^2 square and have d_1 x ... x d_n x 2 shape
+        coords = 2 * coords - 1
+        coords = coords @ self.positional_encoding_gaussian_matrix
+        coords = 2 * np.pi * coords
+        # outputs d_1 x ... x d_n x C shape
+        return torch.cat([torch.sin(coords), torch.cos(coords)], dim=-1)
+
+    def forward(self, size: Tuple[int, int]) -> torch.Tensor:
+        """Generate positional encoding for a grid of the specified size."""
+        h, w = size
+        device: Any = self.positional_encoding_gaussian_matrix.device
+        grid = torch.ones((h, w), device=device, dtype=torch.float32)
+        y_embed = grid.cumsum(dim=0) - 0.5
+        x_embed = grid.cumsum(dim=1) - 0.5
+        y_embed = y_embed / h
+        x_embed = x_embed / w
+
+        pe = self._pe_encoding(torch.stack([x_embed, y_embed], dim=-1))
+        return pe.permute(2, 0, 1)  # C x H x W
+
+    def forward_with_coords(
+        self, coords_input: torch.Tensor, image_size: Tuple[int, int]
+    ) -> torch.Tensor:
+        """Positionally encode points that are not normalized to [0,1]."""
+        coords = coords_input.clone()
+        coords[:, :, 0] = coords[:, :, 0] / image_size[1]
+        coords[:, :, 1] = coords[:, :, 1] / image_size[0]
+        return self._pe_encoding(coords.to(torch.float))  # B x N x C

@@ -29,7 +29,7 @@ class SourceEncoder(nn.Module):
         norm_layer: Type[nn.Module] = nn.BatchNorm2d,
         act_layer: Type[nn.Module] = nn.GELU,
         # use_abs_pos: bool = False,
-        use_rel_pos: bool = True,
+        use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
         # window_size: int = 0,
         # global_attn_indexes: Tuple[int, ...] = (),
@@ -79,12 +79,11 @@ class SourceEncoder(nn.Module):
             padding=1,
         )
 
-        self.img_size /= 2  # (128 * 128 * 64)
         
         self.blocks = nn.ModuleList()
         for i in range(depth):
             block = NewBlock(
-                dim=embed_dim,
+                dim=embed_dim * (increase_scale**i),
                 num_heads=num_heads,
                 # mlp_ratio=mlp_ratio,
                 qkv_bias=qkv_bias,
@@ -93,11 +92,9 @@ class SourceEncoder(nn.Module):
                 use_rel_pos=use_rel_pos,
                 rel_pos_zero_init=rel_pos_zero_init,
                 # window_size=window_size if i not in global_attn_indexes else 0,
-                input_size=(img_size, img_size),
+                input_size=(img_size / (2 **(i + 1)), img_size/(2 **(i + 1))),
                 increase_scale = increase_scale,
             )
-            img_size /= 2
-            embed_dim *= increase_scale
             self.blocks.append(block)
 
         # self.neck = nn.Sequential(
@@ -132,6 +129,8 @@ class SourceEncoder(nn.Module):
         # x = self.neck(x.permute(0, 3, 1, 2))
 
         return x
+    
+    
 
 class NewBlock(nn.Module):
     """a block for source encoder"""
@@ -144,7 +143,7 @@ class NewBlock(nn.Module):
         qkv_bias: bool = True,
         norm_layer: Type[nn.Module] = nn.BatchNorm2d,
         act_layer: Type[nn.Module] = nn.GELU,
-        use_rel_pos: bool = True,
+        use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
         # window_size: int = 0,
         input_size: Optional[Tuple[int, int]] = None,
@@ -171,6 +170,7 @@ class NewBlock(nn.Module):
         self.norm2 = norm_layer(dim * increase_scale)
 
         self.act = act_layer()
+        self.input_size = input_size
 
         self.attn = Attention(
             dim,
@@ -207,6 +207,10 @@ class NewBlock(nn.Module):
             padding=1,
             bias=False,
         )
+
+        self.pos_embed = nn.Parameter(
+                torch.zeros(1, dim, int(input_size[0]), int( input_size[1]))
+            )
         
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -238,6 +242,7 @@ class NewBlock(nn.Module):
         x = self.act(x)
 
         # multiattention
+        x = x + self.pos_embed
         x = self.attn(x.permute(0, 2, 3, 1)) # change to (B, H, W, C)
         
         x = x.permute(0, 3, 1, 2) # change back 
@@ -325,7 +330,7 @@ class Attention(nn.Module):
         dim: int,
         num_heads: int = 8,
         qkv_bias: bool = True,
-        use_rel_pos: bool = True,
+        use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
         input_size: Optional[Tuple[int, int]] = None,
     ) -> None:

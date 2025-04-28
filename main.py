@@ -3,7 +3,7 @@ import argparse
 from importlib import import_module
 import cv2
 
-from dataset import *
+from test.dataset import *
 
 
 Benchmark = "organizedData"
