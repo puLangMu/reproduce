@@ -79,10 +79,18 @@ class SourceEncoder(nn.Module):
             padding=1,
         )
 
+        self.conv2 = nn.Conv2d(
+            in_channels=embed_dim * (2 ** depth),
+            out_channels=256,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
+
         
         self.blocks = nn.ModuleList()
         for i in range(depth):
-            block = NewBlock(
+            block = DownBlock(
                 dim=embed_dim * (increase_scale**i),
                 num_heads=num_heads,
                 # mlp_ratio=mlp_ratio,
@@ -91,7 +99,7 @@ class SourceEncoder(nn.Module):
                 act_layer=act_layer,
                 use_rel_pos=use_rel_pos,
                 rel_pos_zero_init=rel_pos_zero_init,
-                # window_size=window_size if i not in global_attn_indexes else 0,
+                window_size= 16,
                 input_size=(img_size / (2 **(i + 1)), img_size/(2 **(i + 1))),
                 increase_scale = increase_scale,
             )
@@ -128,11 +136,14 @@ class SourceEncoder(nn.Module):
         
         # x = self.neck(x.permute(0, 3, 1, 2))
 
+        x = self.conv2(x)
+        x = x.view(x.shape[0], x.shape[1], -1).permute(0, 2, 1) # (B, H*W, C)
+
         return x
     
     
 
-class NewBlock(nn.Module):
+class DownBlock(nn.Module):
     """a block for source encoder"""
 
     def __init__(
@@ -145,7 +156,7 @@ class NewBlock(nn.Module):
         act_layer: Type[nn.Module] = nn.GELU,
         use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
-        # window_size: int = 0,
+        window_size: int = 0,
         input_size: Optional[Tuple[int, int]] = None,
         increase_scale: int = 2,
     ) -> None:
@@ -166,6 +177,8 @@ class NewBlock(nn.Module):
             increase_scale (int): Scale factor for increasing the number of channels.
         """
         super().__init__()
+        self.window_size = window_size
+
         self.norm1 = norm_layer(dim)
         self.norm2 = norm_layer(dim * increase_scale)
 
@@ -243,7 +256,16 @@ class NewBlock(nn.Module):
 
         # multiattention
         x = x + self.pos_embed
-        x = self.attn(x.permute(0, 2, 3, 1)) # change to (B, H, W, C)
+
+        x = x.permute(0, 2, 3, 1) # change to (B, H, W, C)
+        if self.window_size > 0:
+            H, W = x.shape[1], x.shape[2]
+            x, pad_hw = window_partition(x, self.window_size)
+
+        x = self.attn(x)
+        # Reverse window partition
+        if self.window_size > 0:
+            x = window_unpartition(x, self.window_size, pad_hw, (H, W))
         
         x = x.permute(0, 3, 1, 2) # change back 
         x = self.norm1(x) 
@@ -251,6 +273,8 @@ class NewBlock(nn.Module):
         x = self.downsample(x)
         x = self.norm2(x)
         x = self.act(x)
+
+
 
         return x
 
@@ -380,53 +404,53 @@ class Attention(nn.Module):
         return x
 
 
-# def window_partition(x: torch.Tensor, window_size: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
-#     """
-#     Partition into non-overlapping windows with padding if needed.
-#     Args:
-#         x (tensor): input tokens with [B, H, W, C].
-#         window_size (int): window size.
+def window_partition(x: torch.Tensor, window_size: int) -> Tuple[torch.Tensor, Tuple[int, int]]:
+    """
+    Partition into non-overlapping windows with padding if needed.
+    Args:
+        x (tensor): input tokens with [B, H, W, C].
+        window_size (int): window size.
 
-#     Returns:
-#         windows: windows after partition with [B * num_windows, window_size, window_size, C].
-#         (Hp, Wp): padded height and width before partition
-#     """
-#     B, H, W, C = x.shape
+    Returns:
+        windows: windows after partition with [B * num_windows, window_size, window_size, C].
+        (Hp, Wp): padded height and width before partition
+    """
+    B, H, W, C = x.shape
 
-#     pad_h = (window_size - H % window_size) % window_size
-#     pad_w = (window_size - W % window_size) % window_size
-#     if pad_h > 0 or pad_w > 0:
-#         x = F.pad(x, (0, 0, 0, pad_w, 0, pad_h))
-#     Hp, Wp = H + pad_h, W + pad_w
+    pad_h = (window_size - H % window_size) % window_size
+    pad_w = (window_size - W % window_size) % window_size
+    if pad_h > 0 or pad_w > 0:
+        x = F.pad(x, (0, 0, 0, pad_w, 0, pad_h))
+    Hp, Wp = H + pad_h, W + pad_w
 
-#     x = x.view(B, Hp // window_size, window_size, Wp // window_size, window_size, C)
-#     windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
-#     return windows, (Hp, Wp)
+    x = x.view(B, Hp // window_size, window_size, Wp // window_size, window_size, C)
+    windows = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(-1, window_size, window_size, C)
+    return windows, (Hp, Wp)
 
 
-# def window_unpartition(
-#     windows: torch.Tensor, window_size: int, pad_hw: Tuple[int, int], hw: Tuple[int, int]
-# ) -> torch.Tensor:
-#     """
-#     Window unpartition into original sequences and removing padding.
-#     Args:
-#         windows (tensor): input tokens with [B * num_windows, window_size, window_size, C].
-#         window_size (int): window size.
-#         pad_hw (Tuple): padded height and width (Hp, Wp).
-#         hw (Tuple): original height and width (H, W) before padding.
+def window_unpartition(
+    windows: torch.Tensor, window_size: int, pad_hw: Tuple[int, int], hw: Tuple[int, int]
+) -> torch.Tensor:
+    """
+    Window unpartition into original sequences and removing padding.
+    Args:
+        windows (tensor): input tokens with [B * num_windows, window_size, window_size, C].
+        window_size (int): window size.
+        pad_hw (Tuple): padded height and width (Hp, Wp).
+        hw (Tuple): original height and width (H, W) before padding.
 
-#     Returns:
-#         x: unpartitioned sequences with [B, H, W, C].
-#     """
-#     Hp, Wp = pad_hw
-#     H, W = hw
-#     B = windows.shape[0] // (Hp * Wp // window_size // window_size)
-#     x = windows.view(B, Hp // window_size, Wp // window_size, window_size, window_size, -1)
-#     x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, Hp, Wp, -1)
+    Returns:
+        x: unpartitioned sequences with [B, H, W, C].
+    """
+    Hp, Wp = pad_hw
+    H, W = hw
+    B = windows.shape[0] // (Hp * Wp // window_size // window_size)
+    x = windows.view(B, Hp // window_size, Wp // window_size, window_size, window_size, -1)
+    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, Hp, Wp, -1)
 
-#     if Hp > H or Wp > W:
-#         x = x[:, :H, :W, :].contiguous()
-#     return x
+    if Hp > H or Wp > W:
+        x = x[:, :H, :W, :].contiguous()
+    return x
 
 
 def get_rel_pos(q_size: int, k_size: int, rel_pos: torch.Tensor) -> torch.Tensor:
