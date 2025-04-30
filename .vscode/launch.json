@@ -15,7 +15,7 @@
             // "console": "integratedTerminal",
             "args": [
                     "--epochs", "20",
-                    "--batch-size", "1",
+                    "--batch-size", "32",
                 ],
                             
             "console": "integratedTerminal",    
