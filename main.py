@@ -152,6 +152,8 @@ for batch in train_loader:
     single_resist = resist # 第一张 resist 图像
     break  # 只需要一个批次，退出循环
 
+# print(single_mask.shape)
+
 loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(single_mask, single_resist, 1, 1, 100, 0.7)
 print("Loss:", loss.item())
 print("BCE Loss:", BCE_loss.item())

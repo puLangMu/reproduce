@@ -113,6 +113,11 @@ def main():
         print("Dice Loss(mask):", dice_loss.item())
         print("SSIM Loss(mask):", ssim_loss.item())
 
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_mask.to(device), 1, 1, 100, 0.7)
+        print("Loss(another):", loss.item())
+        print("BCE Loss(another):", BCE_loss.item())
+        print("Dice Loss(another):", dice_loss.item())
+        print("SSIM Loss(another):", ssim_loss.item())
     
     pred = torch.where(pred > 0.5, torch.tensor(1.0, device=pred.device), torch.tensor(0.0, device=pred.device))
     # 保存图片到文件夹
