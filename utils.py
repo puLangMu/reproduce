@@ -255,7 +255,7 @@ def evaluate(model, data_loader, device, epoch):
         loss = calculate_loss(pred, resist.to(device), alpha=1, beta=1, gamma=100, k=0.7)
 
 
-        data_loader.desc = "[valid epoch {}] loss: {:.3f}, acc: {:.3f}".format(epoch, loss.item() )
+        data_loader.desc = "[valid epoch {}] loss: {:.3f}".format(epoch, loss.item() )
                                                                                
 
 

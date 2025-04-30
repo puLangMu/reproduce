@@ -18,7 +18,7 @@ def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
 
-    tb_writer = SummaryWriter("runs/Litho")
+    tb_writer = SummaryWriter("runs")
 
 
     # 实例化训练数据集
