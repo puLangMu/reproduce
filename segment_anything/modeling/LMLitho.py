@@ -47,7 +47,6 @@ class LMLitho(nn.Module):
     # def device(self) -> Any:
     #     return self.pixel_mean.device
 
-    @torch.no_grad()
     def forward(
         self,
         image_input: torch.Tensor,

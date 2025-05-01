@@ -1,84 +1,86 @@
-import numpy as np
+import os
+import json
+
 import torch
+from PIL import Image
+from torchvision import transforms
 import matplotlib.pyplot as plt
-import cv2
+from dataset import *
+
+from utils import calculate_loss
 
 
+ 
+from segment_anything.build_Litho import build_litho
 
-def show_mask(mask, ax, random_color=False):
-    if random_color:
-        color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
+def validate_binary_tensor(tensor):
+    unique_values = torch.unique(tensor)
+    print("Unique values in tensor:", unique_values)
+    if torch.all((unique_values == 0) | (unique_values == 1)):
+        print("The tensor is correctly binarized (only contains 0 and 1).")
     else:
-        color = np.array([30/255, 144/255, 255/255, 0.6])
-    h, w = mask.shape[-2:]
-    mask_image = mask.reshape(h, w, 1) * color.reshape(1, 1, -1)
-    ax.imshow(mask_image)
-    
-def show_points(coords, labels, ax, marker_size=375):
-    pos_points = coords[labels==1]
-    neg_points = coords[labels==0]
-    ax.scatter(pos_points[:, 0], pos_points[:, 1], color='green', marker='*', s=marker_size, edgecolor='white', linewidth=1.25)
-    ax.scatter(neg_points[:, 0], neg_points[:, 1], color='red', marker='*', s=marker_size, edgecolor='white', linewidth=1.25)   
-    
-def show_box(box, ax):
-    x0, y0 = box[0], box[1]
-    w, h = box[2] - box[0], box[3] - box[1]
-    ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
+        print("The tensor contains values other than 0 and 1!")
+
+Benchmark = "organizedData"
+ImageSize = (1024,1024)
+BatchSize = 4
+NJobs = 8
+
+train_loader, val_loader = loadersLitho(Benchmark, ImageSize, BatchSize, NJobs)
+
+import matplotlib.pyplot as plt
+
+import os
+import matplotlib.pyplot as plt
+
+def show_images(pred, single_mask, single_source, single_resist, save_dir="pictures"):
+    # 将张量从 (1, 1, 1024, 1024) 转换为 (1024, 1024) 的 numpy 数组
+    pred_np = pred.squeeze().cpu().numpy()
+    single_mask_np = single_mask.squeeze().cpu().numpy()
+    single_source_np = single_source.squeeze().cpu().numpy()
+    single_resist_np = single_resist.squeeze().cpu().numpy()
+
+   
+
+    # 创建保存目录
+    os.makedirs(save_dir, exist_ok=True)
+
+    # 创建一个 1x4 的子图
+    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
+
+    # 显示每张图片
+    axes[0].imshow(pred_np, cmap='gray', vmin=0, vmax=1)
+    axes[0].set_title("Prediction")
+    axes[0].axis("off")
+
+    axes[1].imshow(single_mask_np, cmap='gray')
+    axes[1].set_title("Mask")
+    axes[1].axis("off")
+
+    axes[2].imshow(single_source_np, cmap='binary')
+    axes[2].set_title("Source")
+    axes[2].axis("off")
+
+    axes[3].imshow(single_resist_np, cmap='binary')
+    axes[3].set_title("Resist")
+    axes[3].axis("off")
+
+    # 保存图像到文件
+    save_path = os.path.join(save_dir, "comparison.png")
+    plt.tight_layout()
+    plt.savefig(save_path)
+    print(f"Image saved to {save_path}")
+    plt.close()
 
 
-image = cv2.imread('images/try.png')
-image = cv2.resize(image,None,fx=0.5,fy=0.5)
-image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+x = torch.randn(1, 1, 1024, 1024)
+x = torch.sigmoid(1000000*x)
+y = torch.randn(1, 1, 1024, 1024)
+y = torch.sigmoid(y)
+y = torch.where(y > 0.5, torch.ones_like(y), torch.zeros_like(y))
+z = torch.randn(1, 1, 1024, 1024)
+z = torch.sigmoid(z)
+z = torch.where(z > 0.5, torch.tensor(1), torch.tensor(0))
 
-plt.figure(figsize=(10,10))
-plt.imshow(image)
-plt.axis('on')
-plt.show()
-
-
-import sys
-sys.path.append("..")
-from segment_anything import sam_model_registry, SamPredictor
-
-#sam_checkpoint = "sam_vit_b_01ec64.pth"
-sam_checkpoint = "sam_vit_h_4b8939.pth"
-#model_type = "vit_b"
-model_type = "vit_h"
-
-device = "cuda"
-
-sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
-sam.to(device=device)
-
-predictor = SamPredictor(sam)
-#predictor.set_image(image)
-
-predictor.set_image(image)
-
-
-input_point = np.array([[250, 330]])
-input_label = np.array([1])
-
-plt.figure(figsize=(10,10))
-plt.imshow(image)
-show_points(input_point, input_label, plt.gca())
-plt.axis('on')
-plt.show()  
-
-masks, scores, logits = predictor.predict(
-    point_coords=input_point,
-    point_labels=input_label,
-    multimask_output=True,
-)
-
-print(masks.shape)  # (number_of_masks) x H x W  | output (3, 600, 900)
-
-for i, (mask, score) in enumerate(zip(masks, scores)):
-    plt.figure(figsize=(10,10))
-    plt.imshow(image)
-    show_mask(mask, plt.gca())
-    show_points(input_point, input_label, plt.gca())
-    plt.title(f"Mask {i+1}, Score: {score:.3f}", fontsize=18)
-    plt.axis('off')
-    plt.show()  
-
+a = torch.randint(0, 2, (1, 1, 1024, 1024))
+show_images(x, y, z, a)

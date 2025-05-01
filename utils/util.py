@@ -74,7 +74,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
         # accu_loss += loss.detach()
 
         mask, source, resist = data
-        source = torch.nn.functional.interpolate(source, size=(256, 256), mode='bilinear', align_corners=False)
+        source = torch.nn.functional.interpolate(source, size=(256,256), mode='bilinear', align_corners=False)
 
         source.requires_grad = True
         mask.requires_grad = True
@@ -87,7 +87,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
     
         loss, BCE_loss, dice_loss, ssim_loss  = calculate_loss(pred, mask.to(device), alpha=2, beta=1, gamma=3, k=0.9)
 
-        loss.backward()
+        loss.backward(retain_graph=True)
 
         data_loader.desc = "[train epoch {}] loss: {:.3f}".format(epoch, loss.item() )
                                                                                
@@ -97,16 +97,15 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
             sys.exit(1)
 
         
+        # for name, parms in reversed(list(model.named_parameters())):
+        #     print('-->name:', name, '-->grad_requirs:', parms.requires_grad, ' -->grad_value:', parms.grad)
         
-        
-        torch.nn.utils.clip_grad_value_(mask, clip_value=0.5)
-        nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
+        # torch.nn.utils.clip_grad_value_(mask, clip_value=0.5)
+        # nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
         
         
         optimizer.step()
-        if step % 10 == 0:
-            for name, parms in reversed(list(model.named_parameters())):
-                print('-->name:', name, '-->grad_requirs:', parms.requires_grad, ' -->grad_value:', parms.grad)
+        
         optimizer.zero_grad()
 
     return loss.item()

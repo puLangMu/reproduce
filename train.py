@@ -8,7 +8,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 
-from segment_anything.build_Litho import build_litho
+from segment_anything.build_Litho import build_litho, build_light_litho
 from utils import  train_one_epoch, evaluate
 
 from dataset import *
@@ -41,7 +41,7 @@ def main(args):
     #                                          collate_fn=val_dataset.collate_fn)
 
     Benchmark = "organizedData"
-    ImageSize = (1024,1024)
+    ImageSize = (1024, 1024)
     BatchSize = args.batch_size
     NJobs = 8
 
@@ -110,7 +110,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch-size', type=int, default=30)
+    parser.add_argument('--batch-size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--lrf', type=float, default=0.01)
 

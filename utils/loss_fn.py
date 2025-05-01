@@ -127,6 +127,7 @@ def calculate_loss(pred, labels, alpha, beta, gamma, k):
 
 
     loss = alpha * dice_loss + beta * BCE_loss + gamma * ssim_loss
+    # loss = BCE_loss
 
     return loss, BCE_loss * beta, dice_loss * alpha, ssim_loss * gamma
 

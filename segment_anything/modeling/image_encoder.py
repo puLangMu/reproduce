@@ -31,7 +31,7 @@ class ImageEncoderViT(nn.Module):
         use_abs_pos: bool = True,
         use_rel_pos: bool = False,
         rel_pos_zero_init: bool = True,
-        window_size: int = 0,
+        window_size: int = 16,
         global_attn_indexes: Tuple[int, ...] = (),
     ) -> None:
         """
@@ -389,6 +389,7 @@ class PatchEmbed(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+
         x = self.proj(x)
         # B C H W -> B H W C
         x = x.permute(0, 2, 3, 1)

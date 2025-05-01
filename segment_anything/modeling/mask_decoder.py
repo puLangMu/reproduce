@@ -155,13 +155,13 @@ class MaskDecoder(nn.Module):
         #     mask_slice = slice(0, 1)
         # masks = masks[:, mask_slice, :, :]
         # iou_pred = iou_pred[:, mask_slice]
-
+        
         masks = self.block1(masks)
         masks = self.upsample(masks)
 
        
-        masks = torch.sigmoid(40 * (masks - 0.5))
-        masks = torch.where(masks > 0.5, torch.tensor(1.0, device=masks.device), torch.tensor(0.0, device=masks.device))
+        masks = torch.sigmoid(100 * (masks - 0.5))
+        # masks = torch.where(masks > 0.5, torch.tensor(1.0, device=masks.device), torch.tensor(0.0, device=masks.device))
         # Prepare output
         return masks
 
