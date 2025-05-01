@@ -95,31 +95,31 @@ def main():
         pred = model(single_mask.to(device), single_source.to(device)) 
 
 
-        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_resist.to(device), 1, 1, 100, 0.7)
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_resist.to(device), alpha=2, beta=1, gamma=3, k=0.9)
         print("Loss:", loss.item())
         print("BCE Loss:", BCE_loss.item())
         print("Dice Loss:", dice_loss.item())
         print("SSIM Loss:", ssim_loss.item())
 
-        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(single_resist.to(device), single_resist.to(device), 1, 1, 100, 0.7)
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(single_resist.to(device), single_resist.to(device), alpha=2, beta=1, gamma=3, k=0.9)
         print("Loss(Truth):", loss.item())
         print("BCE Loss(Truth):", BCE_loss.item())
         print("Dice Loss(Truth):", dice_loss.item())
         print("SSIM Loss(Truth):", ssim_loss.item())
 
-        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(single_mask.to(device), single_resist.to(device), 1, 1, 100, 0.7)
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(single_mask.to(device), single_resist.to(device), alpha=2, beta=1, gamma=3, k=0.9)
         print("Loss(mask):", loss.item())
         print("BCE Loss(mask):", BCE_loss.item())
         print("Dice Loss(mask):", dice_loss.item())
         print("SSIM Loss(mask):", ssim_loss.item())
 
-        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_mask.to(device), 1, 1, 100, 0.7)
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_mask.to(device), alpha=2, beta=1, gamma=3, k=0.9)
         print("Loss(another):", loss.item())
         print("BCE Loss(another):", BCE_loss.item())
         print("Dice Loss(another):", dice_loss.item())
         print("SSIM Loss(another):", ssim_loss.item())
     
-    pred = torch.where(pred > 0.5, torch.tensor(1.0, device=pred.device), torch.tensor(0.0, device=pred.device))
+   
     # 保存图片到文件夹
     show_images(pred, single_mask, single_source, single_resist, save_dir="pictures")
 

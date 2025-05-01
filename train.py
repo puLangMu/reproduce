@@ -79,6 +79,8 @@ def main(args):
     lf = lambda x: ((1 + math.cos(x * math.pi / args.epochs)) / 2) * (1 - args.lrf) + args.lrf  # cosine
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
+
+
     for epoch in range(args.epochs):
         # train
         train_loss =  train_one_epoch(model=model,
@@ -100,13 +102,15 @@ def main(args):
         tb_writer.add_scalar(tags[2], val_loss, epoch)
         tb_writer.add_scalar(tags[4], optimizer.param_groups[0]["lr"], epoch)
 
+        
+
         torch.save(model.state_dict(), "./weights/model-{}.pth".format(epoch))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch-size', type=int, default=8)
+    parser.add_argument('--batch-size', type=int, default=30)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--lrf', type=float, default=0.01)
 

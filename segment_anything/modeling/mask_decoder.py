@@ -161,6 +161,7 @@ class MaskDecoder(nn.Module):
 
        
         masks = torch.sigmoid(40 * (masks - 0.5))
+        masks = torch.where(masks > 0.5, torch.tensor(1.0, device=masks.device), torch.tensor(0.0, device=masks.device))
         # Prepare output
         return masks
 

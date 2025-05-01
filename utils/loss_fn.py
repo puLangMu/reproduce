@@ -114,7 +114,10 @@ class SSIM(torch.nn.Module):
 
 def calculate_loss(pred, labels, alpha, beta, gamma, k):
     
-    BCE_loss = BCE_loss_function(pred, labels, k)
+    weights = torch.where(labels == 1, torch.tensor(k, device=labels.device), torch.tensor((1-k), device=labels.device))
+
+    
+    BCE_loss = nn.BCELoss(weight=weights)(pred, labels)
 
     dice_loss = dice_loss_function(pred, labels)
 
@@ -125,7 +128,7 @@ def calculate_loss(pred, labels, alpha, beta, gamma, k):
 
     loss = alpha * dice_loss + beta * BCE_loss + gamma * ssim_loss
 
-    return loss, BCE_loss, dice_loss, ssim_loss
+    return loss, BCE_loss * beta, dice_loss * alpha, ssim_loss * gamma
 
 def dice_loss_function(pred, target):
     smooth = 1.
@@ -136,13 +139,3 @@ def dice_loss_function(pred, target):
  
     return 1-(2. * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
 
-def BCE_loss_function(pred, target, k = 0.7):
-    epsilon = 1e-12
-
-    pred = torch.clamp(pred, epsilon, 1.0 - epsilon)  # 将预测值限制在 (epsilon, 1-epsilon) 范围内
-
-    # 计算 BCE 损失
-    loss = - (k * target * torch.log(pred) + (1 - k) * (1 - target) * torch.log(1 - pred))
-
-    # 返回平均损失
-    return loss.mean()
