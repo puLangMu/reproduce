@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 
 
 from utils import calculate_loss
+from utils import show_images
+
 
 
 
@@ -59,6 +61,11 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
     # accu_num = torch.zeros(1).to(device)   # 累计预测正确的样本数
     optimizer.zero_grad()
 
+    k = 0.9
+    alpha = 2
+    beta = 1
+    gamma = 3
+
 
     data_loader = tqdm(data_loader, file=sys.stdout)
     for step, data in enumerate(data_loader):
@@ -84,9 +91,27 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
         mask1 = mask.to(device)
         pred = model(mask1, source1)
 
-    
-        loss, BCE_loss, dice_loss, ssim_loss  = calculate_loss(pred, mask.to(device), alpha=2, beta=1, gamma=3, k=0.9)
+       
 
+    
+        loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, resist.to(device), alpha = alpha, beta = beta, gamma = gamma, k= k)
+
+        with torch.no_grad():
+            single_resist =  resist[:1,:,:,:].to(device) # 第一张 resist 图像
+            single_mask = mask[:1,:,:,:].to(device) # 第一张 mask 图像
+            single_source = source[:1,:,:,:].to(device) # 第一张 source 图像
+            test_pred = pred[:1,:,:,:] # 第一张预测图像
+
+            print("Loss:", loss.item())
+            print("BCE Loss:", BCE_loss.item())
+            print("Dice Loss:", dice_loss.item())
+            print("SSIM Loss:", ssim_loss.item())
+
+            # if(loss < 2.5):
+            #       show_images(test_pred, single_mask, single_source, single_resist, save_dir="pictures", name = "loss_{:.3f}".format(loss.item()))
+
+                
+        
         loss.backward(retain_graph=True)
 
         data_loader.desc = "[train epoch {}] loss: {:.3f}".format(epoch, loss.item() )
@@ -101,7 +126,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
         #     print('-->name:', name, '-->grad_requirs:', parms.requires_grad, ' -->grad_value:', parms.grad)
         
         # torch.nn.utils.clip_grad_value_(mask, clip_value=0.5)
-        # nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
+        nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
         
         
         optimizer.step()

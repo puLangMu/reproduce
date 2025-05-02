@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 
 from segment_anything.build_Litho import build_litho, build_light_litho
-from utils import  train_one_epoch, evaluate
+from util import  train_one_epoch, evaluate
 
 from dataset import *
 
@@ -74,9 +74,14 @@ def main(args):
     # pg = [p for p in model.parameters() if p.requires_grad]
 
     parameter = model.parameters()
+
+    model_weight_path = "./saved/reference.pth"
+    model.load_state_dict(torch.load(model_weight_path, map_location=device))
+
     optimizer = optim.AdamW(parameter, lr=args.lr, weight_decay=0.01, betas = [0.9, 0.999])
     # Scheduler https://arxiv.org/pdf/1812.01187.pdf
-    lf = lambda x: ((1 + math.cos(x * math.pi / args.epochs)) / 2) * (1 - args.lrf) + args.lrf  # cosine
+    lf = lambda x: ((1 + math.cos(x 
+    * math.pi / args.epochs)) / 2) * (1 - args.lrf) + args.lrf  # cosine
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)
 
 
@@ -111,7 +116,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--batch-size', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.0005)
     parser.add_argument('--lrf', type=float, default=0.01)
 
 

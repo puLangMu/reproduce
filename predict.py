@@ -23,7 +23,7 @@ def validate_binary_tensor(tensor):
 
 Benchmark = "organizedData"
 ImageSize = (1024,1024)
-BatchSize = 4
+BatchSize = 7
 NJobs = 8
 
 train_loader, val_loader = loadersLitho(Benchmark, ImageSize, BatchSize, NJobs)
@@ -31,58 +31,23 @@ train_loader, val_loader = loadersLitho(Benchmark, ImageSize, BatchSize, NJobs)
 import matplotlib.pyplot as plt
 
 import os
-import matplotlib.pyplot as plt
+from utils import show_images
 
-def show_images(pred, single_mask, single_source, single_resist, save_dir="pictures"):
-    # 将张量从 (1, 1, 1024, 1024) 转换为 (1024, 1024) 的 numpy 数组
-    pred_np = pred.squeeze().cpu().numpy()
-    single_mask_np = single_mask.squeeze().cpu().numpy()
-    single_source_np = single_source.squeeze().cpu().numpy()
-    single_resist_np = single_resist.squeeze().cpu().numpy()
 
-   
 
-    # 创建保存目录
-    os.makedirs(save_dir, exist_ok=True)
-
-    # 创建一个 1x4 的子图
-    fig, axes = plt.subplots(1, 4, figsize=(20, 5))
-
-    # 显示每张图片
-    axes[0].imshow(pred_np, cmap='gray', vmin=0, vmax=1)
-    axes[0].set_title("Prediction")
-    axes[0].axis("off")
-
-    axes[1].imshow(single_mask_np, cmap='gray')
-    axes[1].set_title("Mask")
-    axes[1].axis("off")
-
-    axes[2].imshow(single_source_np, cmap='gray')
-    axes[2].set_title("Source")
-    axes[2].axis("off")
-
-    axes[3].imshow(single_resist_np, cmap='gray')
-    axes[3].set_title("Resist")
-    axes[3].axis("off")
-
-    # 保存图像到文件
-    save_path = os.path.join(save_dir, "comparison.png")
-    plt.tight_layout()
-    plt.savefig(save_path)
-    print(f"Image saved to {save_path}")
-    plt.close()
 
 # 调用函数展示图片
 
 def main():
 
-    for batch in val_loader:
+    for step, batch in enumerate(train_loader):
         mask, source, resist = batch  # 获取一个批次的数据
         # 假设批次大小为 4，提取第一张图片
-        single_mask = mask[:1,:,:,:]  # 第一张 mask 图像
-        single_source = source[:1,:,:,:]  # 第一张 source 图像
-        single_resist = resist[:1,:,:,:] # 第一张 resist 图像
-        break  # 只需要一个批次，退出循环
+        single_mask = mask[1:2,:,:,:]  # 第一张 mask 图像
+        single_source = source[1:2,:,:,:]  # 第一张 source 图像
+        single_resist = resist[1:2,:,:,:] # 第一张 resist 图像
+        if step > 2:
+          break  # 只需要一个批次，退出循环
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -106,7 +71,7 @@ def main():
     with torch.no_grad():
         # predict class
         pred = model(single_mask.to(device), single_source.to(device)) 
-
+        # pred = torch.sigmoid((pred - 0.5) * 100)
 
         loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, single_resist.to(device), alpha = alpha, beta = beta, gamma = gamma, k= k)
         print("Loss:", loss.item())
@@ -134,8 +99,8 @@ def main():
     
 
    # 确保 pred 是二值化的整数类型
-    # pred = torch.where(pred > 0.5, torch.tensor(1.0).to(device), torch.tensor(0.0).to(device))
-    # pred = pred.to(torch.uint8)  # 转换为整数类型
+    pred = torch.where(pred > 0.5, torch.tensor(1).to(device), torch.tensor(0).to(device))
+    pred = pred.to(torch.uint8)  # 转换为整数类型
 
     # 验证 pred 是否为二值化的张量
     # validate_binary_tensor(pred)

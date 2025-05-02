@@ -180,7 +180,12 @@ class DownBlock(nn.Module):
         self.window_size = window_size
 
         self.norm1 = norm_layer(dim)
-        self.norm2 = norm_layer(dim * increase_scale)
+        self.norm2 = norm_layer(dim)
+        self.norm3 = norm_layer(dim)
+
+
+
+        self.norm4 = norm_layer(dim * increase_scale)
 
         self.act = act_layer()
         self.input_size = input_size
@@ -250,7 +255,7 @@ class DownBlock(nn.Module):
         x = self.norm1(x)
         x = self.act(x)
         x = self.conv2(x) 
-        x = self.norm1(x) 
+        x = self.norm2(x) 
         x = x + shortcut
         x = self.act(x)
 
@@ -268,10 +273,10 @@ class DownBlock(nn.Module):
             x = window_unpartition(x, self.window_size, pad_hw, (H, W))
         
         x = x.permute(0, 3, 1, 2) # change back 
-        x = self.norm1(x) 
+        x = self.norm3(x) 
 
         x = self.downsample(x)
-        x = self.norm2(x)
+        x = self.norm4(x)
         x = self.act(x)
 
 

@@ -143,5 +143,5 @@ def lithosim(basedir, sizeImage=(512, 512), ratioTrain=0.9, cache=False):
 def loadersLitho(benchmark, image_size, batch_size, njobs, drop_last=False): 
     trainset, valset = lithosim(benchmark, sizeImage=image_size, ratioTrain=0.9, cache=False)
     train_loader = DataLoader(dataset=trainset, batch_size=batch_size, num_workers=njobs, shuffle=True, drop_last=drop_last)
-    val_loader = DataLoader(dataset=valset, batch_size=batch_size, num_workers=njobs, shuffle=False, drop_last=False)
+    val_loader = DataLoader(dataset=valset, batch_size=batch_size, num_workers=njobs, shuffle=True, drop_last=False)
     return train_loader, val_loader
