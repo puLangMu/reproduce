@@ -12,7 +12,8 @@ for subfolder in subfolders:
 
 # 遍历 LMLithoData 目录下的文件夹
 folder_index = 1
-for folder in sorted(os.listdir(base_dir)):
+# for folder in sorted(os.listdir(base_dir), key=lambda x: int(x) if x.isdigit() else x):
+for folder in sorted(os.listdir(base_dir), key=lambda x: int(x.split('_')[-1].replace('data', '')) if x.startswith("LMLitho_data") and x.split('_')[-1].replace('data', '').isdigit() else float('inf')):
     folder_path = os.path.join(base_dir, folder)
     if os.path.isdir(folder_path):
         # 获取文件夹中的图片
