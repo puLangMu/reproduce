@@ -71,7 +71,7 @@ def main():
     model = build_litho().to(device)
     # load model weights
     # model_weight_path = "./saved/k06.pth"
-    model_weight_path = "./weights/model-1.pth"
+    model_weight_path = "./weights/model-12.pth"
 
     model.load_state_dict(torch.load(model_weight_path, map_location=device))
     model.eval()
