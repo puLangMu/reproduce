@@ -238,3 +238,74 @@ class Attention(nn.Module):
         out = self.out_proj(out)
 
         return out
+
+class CrossAttention(nn.Module):
+    """Multi-head Attention block with relative position embeddings."""
+
+    def __init__(
+        self,
+        dim: int,
+        num_heads: int = 8,
+        qkv_bias: bool = True,
+    ) -> None:
+        """
+        Args:
+            dim (int): Number of input channels.
+            num_heads (int): Number of attention heads.
+            qkv_bias (bool):  If True, add a learnable bias to query, key, value.
+            rel_pos (bool): If True, add relative positional embeddings to the attention map.
+            rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
+            input_size (tuple(int, int) or None): Input resolution for calculating the relative
+                positional parameter size.
+        """
+        super().__init__()
+        self.num_heads = num_heads
+        head_dim = dim // num_heads
+        self.scale = head_dim**-0.5
+
+        self.kv = nn.Linear(dim, dim * 2, bias=qkv_bias)
+        self.proj = nn.Linear(dim, dim)
+
+        self.q = nn.Linear(dim, dim, bias=qkv_bias)
+
+
+        self.up = nn.Sequential(
+            nn.Linear(dim // 4, dim * 2),
+            nn.GELU(),
+            nn.Linear(dim* 2, dim * 16),
+            nn.GELU(),
+        )
+
+
+
+        
+
+
+    def forward(self, src, pos_src, tokens) -> torch.Tensor:
+        #(15,256,64,64)
+        image = (src + pos_src).permute(0, 2, 3, 1) # (15,64,64,256)
+        source = tokens.permute(0,2,1) # (15,64,256) -> (15,256,64)
+
+        source = self.up(source).permute(0,2,1) #(15,256,64) -> (15,256, 64*64)
+
+        B, H, W, _ = image.shape
+
+        # qkv with shape (2, B, nHead, H * W, C)
+        kv = self.kv(source).reshape(B, H * W, 2, self.num_heads, -1).permute(2, 0, 3, 1, 4)
+        # q, k, v with shape (B * nHead, H * W, C)
+        k, v = kv.reshape(2, B * self.num_heads, H * W, -1).unbind(0)
+
+        image = image.reshape(B, H * W, -1)
+        q = self.q(image).reshape(B, H * W, self.num_heads, -1).permute(0, 2, 1, 3)
+        q = q.reshape(B * self.num_heads, H * W, -1)
+
+        attn = (q * self.scale) @ k.transpose(-2, -1)
+
+
+        attn = attn.softmax(dim=-1)
+        x = (attn @ v).view(B, self.num_heads, H, W, -1).permute(0, 2, 3, 1, 4).reshape(B, H, W, -1)
+        x = self.proj(x)
+
+        x = x.reshape(B, H * W, -1)
+
+        return x,x

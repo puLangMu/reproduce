@@ -61,7 +61,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
     # accu_num = torch.zeros(1).to(device)   # 累计预测正确的样本数
     optimizer.zero_grad()
 
-    k = 0.9
+    k = 0.7
     alpha = 2
     beta = 1
     gamma = 3
@@ -96,23 +96,23 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
     
         loss, BCE_loss, dice_loss, ssim_loss = calculate_loss(pred, resist.to(device), alpha = alpha, beta = beta, gamma = gamma, k= k)
 
-        with torch.no_grad():
-            single_resist =  resist[:1,:,:,:].to(device) # 第一张 resist 图像
-            single_mask = mask[:1,:,:,:].to(device) # 第一张 mask 图像
-            single_source = source[:1,:,:,:].to(device) # 第一张 source 图像
-            test_pred = pred[:1,:,:,:] # 第一张预测图像
+        # with torch.no_grad():
+        #     single_resist =  resist[:1,:,:,:].to(device) # 第一张 resist 图像
+        #     single_mask = mask[:1,:,:,:].to(device) # 第一张 mask 图像
+        #     single_source = source[:1,:,:,:].to(device) # 第一张 source 图像
+        #     test_pred = pred[:1,:,:,:] # 第一张预测图像
 
-            print("Loss:", loss.item())
-            print("BCE Loss:", BCE_loss.item())
-            print("Dice Loss:", dice_loss.item())
-            print("SSIM Loss:", ssim_loss.item())
+        #     print("Loss:", loss.item())
+        #     print("BCE Loss:", BCE_loss.item())
+        #     print("Dice Loss:", dice_loss.item())
+        #     print("SSIM Loss:", ssim_loss.item())
 
             # if(loss < 2.5):
             #       show_images(test_pred, single_mask, single_source, single_resist, save_dir="pictures", name = "loss_{:.3f}".format(loss.item()))
 
                 
         
-        loss.backward(retain_graph=True)
+        loss.backward()
 
         data_loader.desc = "[train epoch {}] loss: {:.3f}".format(epoch, loss.item() )
                                                                                
@@ -128,9 +128,16 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
         # torch.nn.utils.clip_grad_value_(mask, clip_value=0.5)
         nn.utils.clip_grad_norm_(model.parameters(), max_norm=20, norm_type=2)
         
-        
+        # if step % 3 == 1:
+        #     for name, parms in reversed(list(model.named_parameters())):
+        #         print('-->name:', name, '-->grad_requirs:', parms.requires_grad, ' -->grad_value:', parms.grad)
+
+        #     optimizer.step()
+            
+        #     optimizer.zero_grad()
+
         optimizer.step()
-        
+            
         optimizer.zero_grad()
 
     return loss.item()

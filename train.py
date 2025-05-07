@@ -8,7 +8,7 @@ import torch.optim.lr_scheduler as lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from torchvision import transforms
 
-from segment_anything.build_Litho import build_litho, build_light_litho
+from segment_anything.build_Litho import build_litho, build_light_litho, build_source_litho, build_litho_one
 from util import  train_one_epoch, evaluate
 
 from dataset import *
@@ -75,8 +75,9 @@ def main(args):
 
     parameter = model.parameters()
 
-    model_weight_path = "./saved/reference.pth"
-    model.load_state_dict(torch.load(model_weight_path, map_location=device))
+    # model_weight_path = "./saved/model-4.pth"
+    
+    # model.load_state_dict(torch.load(model_weight_path, map_location=device))
 
     optimizer = optim.AdamW(parameter, lr=args.lr, weight_decay=0.01, betas = [0.9, 0.999])
     # Scheduler https://arxiv.org/pdf/1812.01187.pdf
@@ -113,9 +114,10 @@ def main(args):
 
 
 if __name__ == '__main__':
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch-size', type=int, default=6)
+    parser.add_argument('--epochs', type=int, default=25)
+    parser.add_argument('--batch-size', type=int, default=15)
     parser.add_argument('--lr', type=float, default=0.0005)
     parser.add_argument('--lrf', type=float, default=0.01)
 
