@@ -64,8 +64,8 @@ def main():
     # create model
     model = build_litho().to(device)
     # load model weights
-    model_weight_path = "./saved/direct_k07.pth"
-    # model_weight_path = "./saved/k09.pth"
+    # model_weight_path = "./saved/direct_k07.pth"
+    model_weight_path = "./saved/k09.pth"
 
     # model_weight_path = "./weights/model-24.pth"
 
@@ -140,8 +140,8 @@ def main():
     # show_images(pred, single_mask, single_source, single_resist, save_dir="pictures")
     
     for i in range(mask.shape[0]):
-        show_images(preds[i], mask[i:i+1, :, :, :], source[i:i+1, :, :, :], resist[i:i+1, :, :, :], save_dir="pictures", name = f"pred_resist_{i}.png")
-        # show_images(preds[i], mask[i:i+1, :, :, :], source[i:i+1, :, :, :], resist[i:i+1, :, :, :], save_dir="pictures", name = f"pred_{i}.png")
+        # show_images(preds[i], mask[i:i+1, :, :, :], source[i:i+1, :, :, :], resist[i:i+1, :, :, :], save_dir="pictures", name = f"pred_resist_{i}.png")
+        show_images(preds[i], mask[i:i+1, :, :, :], source[i:i+1, :, :, :], resist[i:i+1, :, :, :], save_dir="pictures", name = f"pred_{i}.png")
 
 
 if __name__ == '__main__':
