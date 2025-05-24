@@ -14,6 +14,12 @@ from util import  train_one_epoch, evaluate
 from dataset import *
 
 
+def setup_seed(seed):
+     torch.manual_seed(seed)
+     torch.cuda.manual_seed_all(seed)
+     np.random.seed(seed)
+     random.seed(seed)
+
 def main(args):
     device = torch.device(args.device if torch.cuda.is_available() else "cpu")
 
@@ -76,10 +82,11 @@ def main(args):
 
 
 if __name__ == '__main__':
-
+    
+    setup_seed(3407)
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', type=int, default=10)
-    parser.add_argument('--batch-size', type=int, default=1)
+    parser.add_argument('--batch-size', type=int, default=9)
     parser.add_argument('--lr', type=float, default=0.0005)
     parser.add_argument('--lrf', type=float, default=0.01)
 
@@ -89,3 +96,4 @@ if __name__ == '__main__':
     opt = parser.parse_args()
 
     main(opt)
+

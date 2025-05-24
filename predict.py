@@ -11,7 +11,7 @@ from utils import calculate_loss
 
 
  
-from segment_anything.build_Litho import build_litho, build_source_litho
+from segment_anything.build_Litho import build_litho, build_light_litho
 
 def validate_binary_tensor(tensor):
     unique_values = torch.unique(tensor)
@@ -56,18 +56,19 @@ def main():
     
 
     k = 0.7
-    alpha = 2
+    alpha = 1
     beta = 1
-    gamma = 3
+    gamma = 1
 
 
     # create model
-    model = build_litho().to(device)
+    model = build_light_litho().to(device)
     # load model weights
     # model_weight_path = "./saved/direct_k07.pth"
-    model_weight_path = "./saved/k09.pth"
+    # model_weight_path = "./saved/k09.pth"
+    # model_weight_path = "./new/2loss.pth"
 
-    # model_weight_path = "./weights/model-24.pth"
+    model_weight_path = "./weights/model-0.pth"
 
     model.load_state_dict(torch.load(model_weight_path, map_location=device))
     model.eval()

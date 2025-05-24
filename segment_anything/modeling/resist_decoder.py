@@ -129,8 +129,9 @@ class ResistDecoder(nn.Module):
           torch.Tensor: batched predicted masks
           torch.Tensor: batched predictions of mask quality
         """
-        image_embeddings = image_embeddings + self.image_pe
-        source_embeddings = source_embeddings + self.source_pe
+        # image_embeddings = image_embeddings + self.image_pe
+        image_embeddings = image_embeddings
+        source_embeddings = source_embeddings 
 
         image_embeddings = image_embeddings.permute(0, 2, 3, 1) # change to (B, H, W, C)
         source_embeddings = source_embeddings.permute(0, 2, 3, 1)
@@ -139,6 +140,7 @@ class ResistDecoder(nn.Module):
 
         # cross attention
         resist = self.cross_attention(image = image_embeddings, source = source_embeddings)
+        # resist = image_embeddings
 
         resist = resist.permute(0, 3, 1, 2) # change back to (B, C, H, W)
         resist = self.output_upscaling(resist)
@@ -147,7 +149,7 @@ class ResistDecoder(nn.Module):
         resist = self.upsample(resist)
 
 
-        resist = torch.sigmoid(100 * (resist - 0.5))
+        resist = torch.sigmoid(100 * (resist))
         return resist
 
 

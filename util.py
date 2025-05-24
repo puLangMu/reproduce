@@ -62,9 +62,9 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch):
     optimizer.zero_grad()
 
     k = 0.7
-    alpha = 2
-    beta = 1
-    gamma = 3
+    alpha = 1
+    beta = 1.5
+    gamma = 0
 
 
     data_loader = tqdm(data_loader, file=sys.stdout)
