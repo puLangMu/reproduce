@@ -9,7 +9,7 @@ import torch.nn.functional as F  # 用于插值
 from dataset import *
 
 Benchmark = "organizedData"
-ImageSize = (1024, 1024)
+ImageSize = (512,512)
 BatchSize = 2
 NJobs = 8
 

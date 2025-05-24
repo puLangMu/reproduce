@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
 # 1. 准备测试张量 (B, C, H, W)
-B, C, H, W = 1, 1, 256, 256  # 批次大小为 4，单通道，图像大小为 256x256
+B, C, H, W = 1, 1, 256,256  # 批次大小为 4，单通道，图像大小为 256x256
 test_input = torch.randn(B, C, H, W, device=device)  # 随机生成测试张量并移动到 GPU
 
 # 2. 实例化 SourceEncoder 模型并移动到 GPU
@@ -23,7 +23,7 @@ model = SourceEncoder(
     img_size=256,  # 输入图像大小
     in_chans=1,    # 输入通道数
     embed_dim=64,  # 嵌入维度
-    depth=4,       # 模型深度
+    depth=2,       # 模型深度
     num_heads=8,   # 注意力头数
 ).to(device)  # 将模型移动到 GPU
 
